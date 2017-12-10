@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/absa-commons/absa-commons.iml" filepath="$PROJECT_DIR$/absa-commons/absa-commons.iml" />
+      <module fileurl="file://$PROJECT_DIR$/absa-english/absa-english.iml" filepath="$PROJECT_DIR$/absa-english/absa-english.iml" />
+      <module fileurl="file://$PROJECT_DIR$/spmf-ubim/spmf-ubim.iml" filepath="$PROJECT_DIR$/spmf-ubim/spmf-ubim.iml" />
+    </modules>
+  </component>
+</project>
