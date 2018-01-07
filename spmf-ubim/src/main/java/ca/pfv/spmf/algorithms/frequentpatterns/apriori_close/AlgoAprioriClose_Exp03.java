@@ -1,4 +1,4 @@
-package ca.pfv.spmf.algorithms.frequentpatterns.apriori;
+package ca.pfv.spmf.algorithms.frequentpatterns.apriori_close;
 /* This file is copyright (c) 2008-2013 Philippe Fournier-Viger
 * 
 * This file is part of the SPMF DATA MINING SOFTWARE
@@ -30,30 +30,28 @@ import java.util.*;
 import java.util.Map.Entry;
 
 /**
- * This is an optimized implementation of the Apriori algorithm that uses binary search to
- * check if subsets of a candidate are frequent and other optimizations.
- *  <br/><br/>
+ * This is an implementation of the AprioriClose (a.k.a Close) algorithm as described by :
+ * <br/><br/>
  *  
- * The apriori algorithm is described  in :
+ * Pasquier, N., Bastide, Y., Taouil, R., Lakhal, L., (1999). Efficient Mining
+ * of Association Rules using Closed Itemset Lattices. Information Systems,
+ * Elsevier Science, 24(1), pages 25-46 .
+ * <br/><br/>
+ *  
+ * The AprioriClose algorithm is an extension of the Apriori algorithm proposed in:
  * <br/><br/>
  *  
  * Agrawal R, Srikant R. "Fast Algorithms for Mining Association Rules", VLDB.
- * Sep 12-15 1994, Chile, 487-99,
+ * Sep 12-15 1994, Chile, 487-99.
  * <br/><br/>
  *  
- * The Apriori algorithm finds all the frequents itemsets and their support in a
- * transaction database provided by the user.
- * <br/><br/>
- *  
- * This is an optimized version that saves the result to a file
+ * This implementation is an optimized version that saves the result to a file
  * or keep it into memory if no output path is provided
  * by the user to the runAlgorithm() method.
  * 
- * @see Itemset
- * @see Itemsets
  * @author Philippe Fournier-Viger
  */
-public class AlgoApriori {
+public class AlgoAprioriClose_Exp03 {
 
 	static SqlConnectionHelper sqlConn = new SqlConnectionHelper("localhost", ABSAConstants.DB_NAME,
 			"root", "123456");
@@ -76,7 +74,7 @@ public class AlgoApriori {
 	}
 
 	// the current level k in the breadth-first search
-	protected int k; 
+	protected int k;
 
 	// variables for statistics
 	protected int totalCandidateCount = 0; // number of candidate generated during last execution
@@ -84,25 +82,25 @@ public class AlgoApriori {
 	protected long endTimestamp; // end time of last execution
 	private int itemsetCount;  // itemset found during last execution
 	private int databaseSize;
-	
+
 	// the minimum support set by the user
 	private int minsupRelative;
-	
+
 	// A memory representation of the database.
 	// Each position in the list represents a transaction
 	private List<int[]> database = null;
-	
-	// The  patterns that are found 
+
+	// The  patterns that are found
 	// (if the user want to keep them into memory)
 	protected Itemsets patterns = null;
 
 	// object to write the output file (if the user wants to write to a file)
-	BufferedWriter writer = null; 
-	
+	BufferedWriter writer = null;
+
 	/**
 	 * Default constructor
 	 */
-	public AlgoApriori() {
+	public AlgoAprioriClose_Exp03() {
 		
 	}
 
@@ -197,10 +195,9 @@ public class AlgoApriori {
 		for(Entry<Integer, Integer> entry : mapItemCount.entrySet()){
 			if(entry.getValue() >= minsupRelative){
 				frequent1.add(entry.getKey());
-				saveItemsetToFile(entry.getKey(), entry.getValue());
+//				saveItemsetToFile(entry.getKey(), entry.getValue());
 			}
 		}
-		mapItemCount = null;
 		
 		// We sort the list of candidates by lexical order
 		// (Apriori need to use a total order otherwise it does not work)
@@ -226,7 +223,12 @@ public class AlgoApriori {
 		// Now we will perform a loop to find all frequent itemsets of size > 1
 		// starting from size k = 2.
 		// The loop will stop when no candidates can be generated.
+		
+		// This will store frequent itemsets from level K.
 		List<Itemset> level = null;
+		//  This will store itemsets from the level K-1 for K>2
+		List<Itemset> previousLevel = null;
+		
 		k = 2;
 		do{
 			// we check the memory usage
@@ -250,13 +252,6 @@ public class AlgoApriori {
 			// of each candidates and keep those with higher suport.
 			// For each transaction:
 			for(int[] transaction: database){
-				// NEW OPTIMIZATION 2013: Skip transactions shorter than k!
-				if(transaction.length < k) {
-//					System.out.println("test");
-					continue;
-				}
-				// END OF NEW OPTIMIZATION
-				
 				// for each candidate:
 	 loopCand:	for(Itemset candidate : candidatesK){
 		 			// a variable that will be use to check if 
@@ -283,8 +278,10 @@ public class AlgoApriori {
 						
 					}
 				}
-			}
+			}	
 
+			// save the current level
+			previousLevel = level;
 			// We build the level k+1 with all the candidates that have
 			// a support higher than the minsup threshold.
 			level = new ArrayList<Itemset>();
@@ -293,10 +290,20 @@ public class AlgoApriori {
 				if (candidate.getAbsoluteSupport() >= minsupRelative) {
 					// add the candidate
 					level.add(candidate);
-					// the itemset is frequent so save it into results
-					saveItemset(candidate);
 				}
 			}
+			
+			
+			// check if subsets are closed,  if yes, then save them to the file.
+			if(previousLevel == null){  // if k =2  
+				// we use this method optimized for itemsets of size 1
+				checkIfItemsetsK_1AreClosed(frequent1, level, mapItemCount);
+			}else{ // if k > 2  
+				// we use the general method
+				checkIfItemsetsK_1AreClosed(previousLevel, level);
+			}
+			
+			
 			// we will generate larger itemsets next.
 			k++;
 		}while(level.isEmpty() == false);
@@ -313,10 +320,72 @@ public class AlgoApriori {
 		
 		return patterns;
 	}
+	
+	/**
+	 * Checks if all the itemsets of size K-1 are closed by comparing
+	 * them with itemsets of size K.
+	 * @param levelKm1 itemsets of size k-1
+	 * @param levelK itemsets of size k
+	 * @throws IOException exception if error writing output file
+	 */
+	private void checkIfItemsetsK_1AreClosed(Collection<Itemset> levelKm1,
+			List<Itemset> levelK) throws IOException {
+		// for each itemset of size k-1
+		for (Itemset itemset : levelKm1) {
+			boolean isClosed = true;
+			// for each itemset of level K, if it has the same 
+			// support and contains the current itemset from k-1
+			// then this latter itemset is not closed.
+			for (Itemset itemsetK : levelK) {
+				if (itemsetK.getAbsoluteSupport() == itemset
+						.getAbsoluteSupport() && itemsetK.containsAll(itemset)) {
+					isClosed = false;
+					break;
+				}
+			}
+			// if the current itemset of size k-1 is closed, then
+			// we save it.
+			if (isClosed) {
+				saveItemset(itemset);
+			}
+		}
+	}
+	
+	/**
+	 * Checks if all the itemsets of size K-1 are closed by comparing
+	 * them with itemsets of size K.
+	 * @param levelKm1 itemsets of size 1
+	 * @param levelK itemsets of size 2
+	 * @param mapItemCount 
+	 * @throws IOException exception if error writing output file
+	 */
+	private void checkIfItemsetsK_1AreClosed(List<Integer> levelKm1,
+			List<Itemset> levelK, Map<Integer, Integer> mapItemCount) throws IOException {
+		// for each itemset of size k-1
+		for (Integer itemset : levelKm1) {
+			boolean isClosed = true;
+			int support = mapItemCount.get(itemset);
+			// for each itemset of level K, if it has the same 
+			// support and contains the current itemset from k-1
+			// then this latter itemset is not closed.	
+			for (Itemset itemsetK : levelK) {
+				if (itemsetK.getAbsoluteSupport() == support && itemsetK.contains(itemset)) {
+					isClosed = false;
+					break;
+				}
+			}
+			// if the current itemset of size k-1 is closed, then
+			// we save it.
+			if (isClosed) {
+				saveItemset(itemset, support);
+			}
+		}
+	}
+
 
 	/**
 	 * Return the number of transactions in the last database read by the algorithm.
-	 * @return the number of transactions.
+	 * @return the number of transactions
 	 */
 	public int getDatabaseSize() {
 		return databaseSize;
@@ -418,15 +487,15 @@ public class AlgoApriori {
 	        // the binary search
 	        while( first <= last )
 	        {
-	        	int middle = ( first + last ) >>1 ; // >>1 means to divide by 2
+	        	int middle = ( first + last ) >>> 1; // divide by 2
 
-	        	int comparison = ArraysAlgos.sameAs(levelK_1.get(middle).getItems(), candidate, posRemoved);
-	            if(comparison < 0 ){
-	            	first = middle + 1;  //  the itemset compared is larger than the subset according to the lexical order
-	            }
-	            else if(comparison  > 0 ){
-	            	last = middle - 1; //  the itemset compared is smaller than the subset  is smaller according to the lexical order
-	            }
+		    	int comparison = ArraysAlgos.sameAs(levelK_1.get(middle).getItems(), candidate, posRemoved);
+		        if(comparison < 0 ){
+		        	first = middle + 1;  //  the itemset compared is larger than the subset according to the lexical order
+		        }
+		        else if(comparison  > 0 ){
+		        	last = middle - 1; //  the itemset compared is smaller than the subset  is smaller according to the lexical order
+		        }
 	            else{
 	            	found = true; //  we have found it so we stop
 	                break;
@@ -441,11 +510,13 @@ public class AlgoApriori {
 		return true;
 	}
 
-	 void saveItemset(Itemset itemset) throws IOException {
+	
+void saveItemset(Itemset itemset) throws IOException {
 		itemsetCount++;
 		
 		// if the result should be saved to a file
 		if(writer != null){
+			//TODO
 			writer.write(itemset.toString() + " #SUP: "
 					+ itemset.getAbsoluteSupport());
 			writer.newLine();
@@ -455,7 +526,7 @@ public class AlgoApriori {
 		}
 	}
 	
-	 void saveItemsetToFile(Integer item, Integer support) throws IOException {
+	 void saveItemset(Integer item, Integer support) throws IOException {
 		itemsetCount++;
 		
 		// if the result should be saved to a file
@@ -478,7 +549,7 @@ public class AlgoApriori {
 		System.out.println(" Candidates count : " + totalCandidateCount);
 		System.out.println(" The algorithm stopped at size " + (k - 1)
 				+ ", because there is no candidate");
-		System.out.println(" Frequent itemsets count : " + itemsetCount);
+		System.out.println(" Frequent closed itemsets count : " + itemsetCount);
 		System.out.println(" Maximum memory usage : " + MemoryLogger.getInstance().getMaxMemory() + " mb");
 		System.out.println(" Total time ~ " + (endTimestamp - startTimestamp) + " ms");
 		System.out.println("===================================================");

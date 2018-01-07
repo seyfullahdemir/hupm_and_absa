@@ -5,10 +5,7 @@ import tr.edu.metu.ceng.absa.common.dbutil.SqlConnectionHelper;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Transaction_Exp03 {
     private int id;
@@ -43,35 +40,68 @@ public class Transaction_Exp03 {
         utility.setValue(utility.getValue() + itemUtility);
     }
 
+    public String toApprioriInputForm(){
+        StringBuilder sb = new StringBuilder();
+
+
+        Map<Integer, Utility> sortedMap = new TreeMap();
+        for (Map.Entry<String, Utility> stringStringEntry : localUtilitiesPerItemMap.entrySet()) {
+            String key = stringStringEntry.getKey();
+            Utility value = stringStringEntry.getValue();
+            ResultSet resultSet = sqlConn.executeSelectQuery("select id from aspect_exp03 where name = '" + key +"'");
+            try {
+                resultSet.next();
+                final int aspectId = resultSet.getInt("id");
+                sortedMap.put(aspectId, value);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        for (Map.Entry<Integer, Utility> integerUtilityEntry : sortedMap.entrySet()) {
+            Integer key = integerUtilityEntry.getKey();
+            sb.append(key + " ");
+        }
+
+        sb.deleteCharAt(sb.toString().length()-1);
+
+        return sb.toString();
+
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
 
-
-        List<Double> valueList = new ArrayList();
+        Map<Integer, Utility> sortedMap = new TreeMap();
         for (Map.Entry<String, Utility> stringStringEntry : localUtilitiesPerItemMap.entrySet()) {
             String key = stringStringEntry.getKey();
             Utility value = stringStringEntry.getValue();
-            valueList.add(value.getValue());
-
             ResultSet resultSet = sqlConn.executeSelectQuery("select id from aspect_exp03 where name = '" + key +"'");
-
             try {
                 resultSet.next();
-                sb.append(resultSet.getInt("id") + " ");
+                final int aspectId = resultSet.getInt("id");
+                sortedMap.put(aspectId, value);
             } catch (SQLException e) {
-                sb.append(key + " ");
+                e.printStackTrace();
             }
+        }
 
+
+        List<Double> valueList = new ArrayList();
+        for (Map.Entry<Integer, Utility> integerUtilityEntry : sortedMap.entrySet()) {
+            Integer key = integerUtilityEntry.getKey();
+            Utility value = integerUtilityEntry.getValue();
+            valueList.add(value.getValue());
+            sb.append(key + " ");
         }
         sb.deleteCharAt(sb.toString().length()-1);
         sb.append(":");
-        /*negation*/sb.append(""+ (-1)*(int)valueList.stream().mapToDouble(i->i).sum());
-        //sb.append(""+ (1)* (int)valueList.stream().mapToDouble(i->i).sum());
+        /*negation*/ sb.append(""+ (-1)*(int)valueList.stream().filter(i -> i<0).mapToDouble(i->i).sum());
+      //  sb.append(""+ (1)* (int)valueList.stream().filter(i -> i>=0).mapToDouble(i->i).sum());
         sb.append(":");
         for (Double utility : valueList) {
-            //sb.append(utility.intValue() + " ");
            /*negation*/ sb.append(utility.intValue()* (-1) + " ");
            //sb.append(utility.intValue() * (1) + " ");
         }

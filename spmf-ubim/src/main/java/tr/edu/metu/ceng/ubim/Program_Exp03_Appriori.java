@@ -10,7 +10,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Program_Exp03 {
+public class Program_Exp03_Appriori {
 
     /***
      * improvement: TODO change to sql
@@ -69,12 +69,12 @@ public class Program_Exp03 {
 
         try{
             //PrintWriter writer = new PrintWriter("transactions.txt", "UTF-8");
-            PrintWriter writer = new PrintWriter("ForWorstUsingFinalAspects_transactions_exp03.txt", "UTF-8");
+            PrintWriter writer = new PrintWriter("ForApprioriUsingFinalAspects_transactions_exp03.txt", "UTF-8");
 
             for (Map.Entry<String, Transaction_Exp03> integerTransactionEntry : transactionsMap.entrySet()) {
                 System.out.println("ReviewID: " + integerTransactionEntry.getKey());
                 System.out.println(integerTransactionEntry.getValue().toString());
-                writer.println(integerTransactionEntry.getValue().toString());
+                writer.println(integerTransactionEntry.getValue().toApprioriInputForm());
             }
 
 

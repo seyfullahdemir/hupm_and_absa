@@ -17,6 +17,14 @@ package ca.pfv.spmf.patterns;
 */
 
 
+import tr.edu.metu.ceng.absa.common.datatypes.ABSAConstants;
+import tr.edu.metu.ceng.absa.common.dbutil.SqlConnectionHelper;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * This is an abstract class indicating general methods 
  * that an ordered itemset should have, and is designed for ordered itemsets where items are sorted
@@ -26,6 +34,26 @@ package ca.pfv.spmf.patterns;
  * @author Philippe Fournier-Viger
  */
 public abstract class AbstractOrderedItemset extends AbstractItemset{
+
+	static SqlConnectionHelper sqlConn = new SqlConnectionHelper("localhost", ABSAConstants.DB_NAME,
+			"root", "123456");
+	static Map<Integer, String> aspects = new HashMap();
+	static {
+		ResultSet resultSet = sqlConn.executeSelectQuery("select * from aspect_exp03");
+
+		try {
+			while (resultSet.next()) {
+				int id = resultSet.getInt("ID");
+				String aspect = resultSet.getString("name");
+
+				aspects.put(id, aspect);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+
+	}
 
 	public AbstractOrderedItemset() {
 		super();
@@ -70,8 +98,8 @@ public abstract class AbstractOrderedItemset extends AbstractItemset{
 		StringBuilder r = new StringBuilder ();
 		// for each item, append it to the StringBuilder
 		for(int i=0; i< size(); i++){
-			r.append(get(i));
-			r.append(' ');
+			r.append(aspects.get(get(i)));
+			r.append(", ");
 		}
 		return r.toString(); // return the tring
 	}

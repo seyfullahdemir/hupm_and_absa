@@ -18,12 +18,12 @@ public class MainTestFHN_saveToFile_Exp03 {
 	public static void main(String [] arg) throws IOException{
 		
 
-		String input = fileToPath("negated_transactions_exp03.txt");
+		String input = fileToPath("ForWorstUsingFinalAspects_transactions_exp03.txt");
 		//String input = fileToPath("NegatedUtilityTransactions.txt");
-		String output = ".//output_negated_transactions_exp03.txt";
+		String output = ".//outputForWorstUsingFinalAspects_transactions_exp03.txt";
 		//String output = ".//NegatedUtilityTransactionsOutput.txt";
 
-		int min_utility = 1;
+		int min_utility = 20;
 
 		// Applying the FHN algorithm
 		AlgoFHN_Exp03 algo = new AlgoFHN_Exp03();

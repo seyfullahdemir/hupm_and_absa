@@ -1,8 +1,15 @@
 package ca.pfv.spmf.patterns.itemset_array_integers_with_count;
-import java.util.List;
 
 import ca.pfv.spmf.algorithms.ArraysAlgos;
 import ca.pfv.spmf.patterns.AbstractOrderedItemset;
+import tr.edu.metu.ceng.absa.common.datatypes.ABSAConstants;
+import tr.edu.metu.ceng.absa.common.dbutil.SqlConnectionHelper;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /* This file is copyright (c) 2008-2012 Philippe Fournier-Viger
 * 
@@ -27,6 +34,8 @@ import ca.pfv.spmf.patterns.AbstractOrderedItemset;
  * @author Philippe Fournier-Viger
  */
 public class Itemset extends AbstractOrderedItemset{
+
+
 	/** the array of items **/
 	public int[] itemset; 
 
